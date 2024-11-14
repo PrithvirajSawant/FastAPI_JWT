@@ -1,0 +1,12 @@
+{
+    "cSpell.words": [
+        "ASGI",
+        "autoflush",
+        "dotenv",
+        "fastapi",
+        "passlib",
+        "sessionmaker",
+        "sqlalchemy",
+        "starlette"
+    ]
+}

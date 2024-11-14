@@ -4,16 +4,16 @@ from sqlalchemy.orm import Session
 
 #importing the database package
 from app.database.user_database import get_db
-from app.models.models import Users
-import app.models.models as User
+from app.models.models_user import Users
+import app.models.models_user as User
 
 #importing the dto package
 from app.schemas.user_schema import CreateUserRequest
 from app.schemas.user_schema import UpdateUserRequest
 
 #importing the auth package
-from app.auth.auth import get_current_user
-from app.auth.auth import pwd_context
+from app.auth.auth_user import get_current_user
+from app.auth.auth_user import pwd_context
 
 db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
