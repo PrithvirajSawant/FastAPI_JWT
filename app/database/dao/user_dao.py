@@ -8,8 +8,8 @@ from app.models.models_user import Users
 import app.models.models_user as User
 
 #importing the dto package
-from app.schemas.user_schema import CreateUserRequest
-from app.schemas.user_schema import UpdateUserRequest
+from app.schemas.user_user_schema import CreateUserRequest
+from app.schemas.user_user_schema import UpdateUserRequest
 
 #importing the auth package
 from app.auth.auth_user import get_current_user
@@ -22,10 +22,15 @@ user_dependency = Annotated[dict, Depends(get_current_user)]
 
 async def create_user(user: user_dependency, db:db_dependency, create_user_request: CreateUserRequest):
     
-    if user["username"] != "Admin":
+    if user["username"] != "vikas":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied: Only 'Admin' can view all users.")
     
     create_user_model = Users(
+        First_Name=create_user_request.First_Name,
+        Last_Name=create_user_request.Last_Name,
+        Department = create_user_request.Department,
+        Address=create_user_request.Address,
+        Email = create_user_request.Email,
         username = create_user_request.username,
         hashed_password = pwd_context.hash(create_user_request.password)
     )
@@ -37,7 +42,7 @@ async def create_user(user: user_dependency, db:db_dependency, create_user_reque
 
 async def fetch_all_users(user: user_dependency, db : db_dependency):
 
-    if user["username"] != "Admin":
+    if user["username"] != "vikas":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied: Only 'Admin' can view all users.")
     
     users = db.query(Users).all()
@@ -48,24 +53,32 @@ async def fetch_all_users(user: user_dependency, db : db_dependency):
 
 async def update_user_name(user_id : int ,user: user_dependency, db: db_dependency, update_request: UpdateUserRequest):
     # Fetch the current tenant from the database
-    if user["username"] != "Admin":
+    if user["username"] != "vikas":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access Denied [Only Admin is AuthZ]")
     
     db_user = db.query(Users).filter(Users.id == user_id).first()
 
     if not db_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-
-    db_user.username = update_request.new_username
+    # fields to update
+    db_user.create_user_model = Users()
+    db_user.First_Name=update_request.First_Name,
+    db_user.Last_Name=update_request.Last_Name,
+    db_user.Department = update_request.Department,
+    db_user.Address=update_request.Address,
+    db_user.Email = update_request.Email,
+    db_user.username = update_request.username,
+    db_user.hashed_password = pwd_context.hash(update_request.password)
+    
     db.commit()
     db.refresh(db_user)
-    return {"msg": f"User {user_id} name updated successfully", "new_username": db_user.username}
+    return {"msg": f"User {user_id} name updated successfully"}
 
 # //////////////////////////
 
 async def delete_user(user_id: int, user : user_dependency, db : db_dependency):
 
-    if user["username"] != "Admin":
+    if user["username"] != "vikas":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access Denied [Only Admin is AuthZ]")
     
     db_user = db.query(Users).filter(Users.id == user_id).first()

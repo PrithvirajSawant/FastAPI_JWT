@@ -1,8 +1,8 @@
 from fastapi import status, APIRouter
 
 #importing the dto class
-from app.schemas.user_schema import CreateUserRequest
-from app.schemas.user_schema import UpdateUserRequest
+from app.schemas.user_user_schema import CreateUserRequest
+from app.schemas.user_user_schema import UpdateUserRequest
 
 #importing dao package
 from app.database.dao import user_dao

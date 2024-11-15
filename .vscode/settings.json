@@ -2,11 +2,15 @@
     "cSpell.words": [
         "ASGI",
         "autoflush",
+        "Conatact",
         "dotenv",
         "fastapi",
         "passlib",
+        "pydantic",
         "sessionmaker",
         "sqlalchemy",
-        "starlette"
+        "starlette",
+        "tenantname",
+        "Vikas"
     ]
 }
