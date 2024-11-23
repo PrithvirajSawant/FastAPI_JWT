@@ -1,7 +1,7 @@
 from datetime import timedelta, datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 
 from sqlalchemy.orm import Session
@@ -41,16 +41,17 @@ db_dependency = Annotated[Session, Depends(get_db)]
 # AuthN
 # todo : remove the endpoint (make it a function)
 @router.post("/token", response_model=Token)
-async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-                                 db:db_dependency):
+async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db:db_dependency):
     user = authenticate_user(form_data.username , form_data.password, db) #fun.  | username is predefined
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate user")
     
+    #tenant_id = user.tenant_id
+    
     # if not user or user.username != "Admin": #generating token for admin-only
     #     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized: Only 'Admin' is allowed to log in.")
     
-    token = create_access_token(user.username, user.id, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)) #fun.  | username over here is w.r.to models.py
+    token = create_access_token(user_name=user.username, user_id=user.id,tenant_id=user.tenant_id, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)) #fun.  | username over here is w.r.to models.py
     
     return {"access_token":token, "token_type":"bearer"}
     
@@ -62,23 +63,34 @@ def authenticate_user(userName: str, password: str, db):
         return False
     return user
 
-def create_access_token(user_name:str, user_id: int, expires_delta: timedelta):
-    encode = {'sub' : user_name, 'id' : user_id}
-    expires = datetime.now(timezone.utc) + expires_delta
-    encode['exp'] = expires.timestamp()
-    # encode.update({'exp':expires})
+def create_access_token(user_name:str, user_id: int, tenant_id:int, expires_delta: timedelta):
+    encode = {'sub' : user_name, 'id' : user_id,  'exp': (datetime.now(timezone.utc) + expires_delta).timestamp()  # Expiration time
+}
+    #expires = datetime.now(timezone.utc) + expires_delta
+    #encode['exp'] = expires.timestamp()
+    #encode.update({'exp':expires})
+    print("Token payload before encoding:", encode)  # Debugging log
     return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
 
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 # Decoding the token
 async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+    # credentials_exception = HTTPException(
+    #     status_code=status.HTTP_401_UNAUTHORIZED,
+    #     detail="Could not validate user",
+    #     headers={"WWW-Authenticate": "Bearer"}
+    # )
+
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        print("Decoded payload:", payload)  # Debugging log
         user_name : str = payload.get('sub')
         user_id : int = payload.get('id')
-        if user_name is None or user_id is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate user as its NULL.')
+        #tenant_id : int = payload.get('tenant_id')
+        if not all([user_name, user_id]):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Token is missing required claims (username, user_id, tenant__id).')
+            #raise credentials_exception
         #EXAMPLE FOR Restricting PARTICULAR TENANT
         # if user_name == 'Aryan' or tenant_id == 1:
         #     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='User - Aryan is not AuthZ.')
@@ -88,6 +100,28 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         
         if 'exp' not in payload or payload['exp'] < datetime.now(timezone.utc).timestamp():
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Token has expired.')
-        return {'username': user_name, 'id': user_id}
-    except JWTError:
+            #raise credentials_exception
+        return {'username': user_name, 'user_id': user_id}
+    except JWTError as e:
+        print("JWTError:", str(e))  # Debugging log
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate user.')
+        #raise credentials_exception
+        
+        
+###################################################################################################################### fetching the tenant_id from the incoming request
+
+async def extract_tenant_id_from_token(request: Request):
+    # Get the token from the Authorization header
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid token")
+    
+    token = auth_header.split(" ")[1]  # Extract token
+    try:
+        payload = jwt.decode(token, "YOUR_SECRET_KEY", algorithms=["HS256"])
+        tenant_id = payload.get("tenant_id")
+        if not tenant_id:
+            raise HTTPException(status_code=400, detail="Tenant ID not found in token")
+        return tenant_id
+    except jwt.JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")

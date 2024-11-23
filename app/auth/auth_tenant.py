@@ -41,8 +41,7 @@ db_dependency = Annotated[Session, Depends(get_db)]
 # AuthN
 # todo : remove the endpoint (make it a function)
 @router.post("/token", response_model=Token)
-async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-                                 db:db_dependency):
+async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],db:db_dependency):
     tenant = authenticate_tenant(form_data.username , form_data.password, db) #fun.  | username is predefined
     if not tenant:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate tenant")
@@ -54,8 +53,8 @@ async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,
     
     return {"access_token":token, "token_type":"bearer"}
     
-def authenticate_tenant(tenantName: str, password: str, db):
-    tenant = db.query(Tenants).filter(Tenants.tenantname == tenantName).first() # | tenantname over here is w.r.to models.py
+def authenticate_tenant(tenantname: str, password: str, db):
+    tenant = db.query(Tenants).filter(Tenants.tenantname == tenantname).first() # | tenantname over here is w.r.to models.py
     if not tenant:
         return False
     if not pwd_context.verify(password, tenant.hashed_password):
@@ -66,6 +65,7 @@ def create_access_token(tenant_name:str, tenant_id: int, expires_delta: timedelt
     encode = {'sub' : tenant_name, 'id' : tenant_id}
     expires = datetime.now(timezone.utc) + expires_delta
     encode['exp'] = expires.timestamp()
+    print("Token payload before encoding:", encode)  # Debugging line
     # encode.update({'exp':expires})
     return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
 

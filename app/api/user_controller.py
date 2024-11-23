@@ -9,21 +9,23 @@ from app.database.dao import user_dao
 
 from app.database.dao.user_dao import db_dependency
 from app.database.dao.user_dao import user_dependency
+from app.database.dao.tenant_dao import tenant_dependency
 
 
 # I have used modular approach for organization
 router = APIRouter()
 
 @router.post("/create-users",status_code=status.HTTP_201_CREATED)
-async def create_user(user: user_dependency, db:db_dependency, create_user_request: CreateUserRequest):
-    return await user_dao.create_user(user, db, create_user_request)
+async def create_user(tenant: tenant_dependency, db:db_dependency, create_user_request: CreateUserRequest):
+    print("Current user in endpoint:", tenant)  # Debugging log
+    return await user_dao.create_user(tenant, db, create_user_request)
 
 @router.get("/view-all-users", status_code=status.HTTP_200_OK)
-async def view_all_users(user: user_dependency, db: db_dependency):
-    return await user_dao.fetch_all_users(user,db)
+async def view_all_users(tenant: tenant_dependency, db: db_dependency):
+    return await user_dao.fetch_all_users(tenant,db)
 
-@router.put("/update_user_name", status_code=status.HTTP_200_OK)
-async def update_user_name(user_id : int ,user: user_dependency, db: db_dependency, update_request: UpdateUserRequest):
+@router.put("/update_user_name/ {user_id}", status_code=status.HTTP_200_OK)
+async def update_user(user_id : int ,user: user_dependency, db: db_dependency, update_request: UpdateUserRequest):
     return await user_dao.update_user_name(user_id,user,db,update_request)
 
 @router.delete("/delete_user/{user_id}", status_code=status.HTTP_200_OK)

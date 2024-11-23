@@ -1,6 +1,7 @@
 from fastapi import Depends, HTTPException, Request, status
 from typing import Annotated
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 #importing the database package
 from app.database.tenant_database import get_db
@@ -20,18 +21,27 @@ tenant_dependency = Annotated[dict, Depends(get_current_tenant)]
 
 
 
-async def create_tenant(tenant: tenant_dependency, db:db_dependency, create_tenant_request: CreateTenantRequest):
+async def create_tenant(tenant: tenant_dependency,db:db_dependency, create_tenant_request: CreateTenantRequest):
     
     if tenant["tenantname"] != "vikas":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied: Only 'Admin' can view all tenants.")
     
     create_tenant_model = Tenants(
         tenantname = create_tenant_request.tenantname,
+        email = create_tenant_request.email,
         hashed_password = pwd_context.hash(create_tenant_request.password)
     )
     db.add(create_tenant_model)
     db.commit()
+    db.refresh(create_tenant_model)
     return {"msg": f"Tenant added successfully"}
+    # except IntegrityError:
+    #     db.rollback()
+    #     raise HTTPException(
+    #         status_code=status.HTTP_400_BAD_REQUEST,
+    #         detail="Tenant with the same email or name already exists.",
+    #     )
+
 
 # //////////////////////////
 

@@ -1,4 +1,4 @@
-from fastapi import status, APIRouter
+from fastapi import status, APIRouter, Depends
 
 #importing the dto class
 from app.schemas.tenant_tenant_schema import CreateTenantRequest
@@ -17,8 +17,8 @@ router = APIRouter()
 
 
 @router.post("/create-tenants",status_code=status.HTTP_201_CREATED)
-async def create_tenant(tenant: tenant_dependency, db:db_dependency, create_tenant_request: CreateTenantRequest):
-    return await tenant_dao.create_tenant(tenant, db, create_tenant_request)
+async def create_tenant( tenant: tenant_dependency,db:db_dependency, create_tenant_request: CreateTenantRequest):
+    return await tenant_dao.create_tenant( tenant, db, create_tenant_request)
 
 @router.get("/view-all-tenants", status_code=status.HTTP_200_OK)
 async def view_all_tenants(tenant: tenant_dependency, db: db_dependency):
